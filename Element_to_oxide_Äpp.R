@@ -16,7 +16,7 @@ cnames <- cnames[-c(1), ]
 cnames <- as.character(names(cnames)) # deletes first row
 
 data_df = read.table(#file.choose(),
-                     "24_2022_example-data_raw.txt",
+  file = file_chr,
                      sep = "\t",
                      header = F
                      , skip = 2
