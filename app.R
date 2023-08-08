@@ -8,52 +8,90 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      helpText("Select the file that you would like to convert"),
+      fileInput("upload", h4("File input")),
+#       helpText("Select the file that you would like to convert"),
       
-      fileInput("upload", h3("File input")),
-      
-      selectInput("var", 
-                  label = "Choose a variable to display",
-                  choices = c("asdf", "jkl"),
-                  selected = "asdf"),
+#       selectInput("var", 
+#                   label = "Choose how to convert",
+#                   choices = c("classic", "manual"),
+#                   selected = "classic"
+#       ),
+
+      selectInput("selected_minor", 
+                  label = "as element",
+                  choices = c(),
+                  multiple = T
+      ),
+
+      selectInput("selected_major", 
+                  label = "as oxide",
+                  choices = c(),
+                  multiple = T
+      ),
+
     ),
     
     mainPanel(
-      textOutput("selected_var"),
+#       textOutput("selected_var"),
 
-      tags$script(HTML(
-        "console.log(input.upload);"
-        )),
+#       tags$script(HTML(
+#         "console.log(input.upload);"
+#         "console.log(input);"
+#         "console.log(output.asdf);"
+#         )),
 
-#       conditionalPanel(condition = "input.upload.lenght > 0",
-#       conditionalPanel(condition = "input.upload.name === null",
-      conditionalPanel(condition = "input.upload",
+#       conditionalPanel(condition = "input.var != null && input.var == 'manual'",
+#       conditionalPanel(condition = "input.upload != null && input.upload.name != null",
                        downloadButton("download"),
-      ),
+#       ),
 
-      tableOutput("contents")
+      tableOutput("original"),
+      tableOutput("converted")
+
     )  
   ),
 )
 
 # Define server logic ----
-server <- function(input, output) {
+server <- function(input, output, session) {
 
   generate_output = reactive({
     req(input$upload)
-    
+#     req(input$selected_minor)
+
+#     tmp = get_major_minor_f(input$upload$datapath)
+#     major_df = tmp[[1]]
+#     minor_df = tmp[[2]]
+
+#     selected_major = major_df[ names(major_df) %in% input$var]
+#     selected_minor = minor_df[ names(minor_df) %in% input$var]
+
+    tbl = read.table(file = input$upload$name,
+                                ,sep = "\t"
+                                ,header = T
+                                ,nrows = 1 
+    )
+
+    selected_major_df = tbl[ names(tbl) %in% input$selected_major]
+    selected_minor_df = tbl[ names(tbl) %in% input$selected_minor]
+
+    print('------------------------------')
+    print(selected_major_df)
+    print(selected_minor_df)
+    print('------------------------------')
+
     ext <- tools::file_ext(input$upload$name)
 #     validate(need(ext == "txt", "Please upload a txt file"))
 #     switch(ext,
 #       csv = vroom::vroom(input$upload$datapath, delim = ","),
 #       tsv = vroom::vroom(input$upload$datapath, delim = "\t"),
 #     )
-    ret = convert_f(input$upload$datapath)
+    ret = convert_f(input$upload$datapath, selected_major_df, selected_minor_df)
   })
   
-  output$selected_var <- renderText({ 
-    paste("You have selected", input$var)
-  })
+#   output$selected_var <- renderText({ 
+#     paste("You have selected", input$var)
+#   })
 
   output$download <- downloadHandler(
     filename = function() {
@@ -64,8 +102,34 @@ server <- function(input, output) {
     }
   )
 
-  output$contents <- renderTable({
+  output$original <- renderTable({
+    req(input$upload)
+    tbl = read.table(file = input$upload$name,
+                     sep = "\t",
+                     header = T)
+    head(tbl, 5)
+  })
+
+  output$converted <- renderTable({
     head(generate_output(), 5)
+  })
+
+  observe({
+    req(input$upload)
+    tmp = get_major_minor_f(input$upload$datapath)
+    classic_major_df = tmp[[1]]
+    classic_minor_df = tmp[[2]]
+    convertible_columns = c(names(classic_minor_df) , names(classic_major_df))
+    updateSelectInput(session, 'selected_minor', choices= convertible_columns)
+  })
+
+  observe({
+    req(input$upload)
+    tmp = get_major_minor_f(input$upload$datapath)
+    classic_major_df = tmp[[1]]
+    classic_minor_df = tmp[[2]]
+    convertible_columns = c(names(classic_minor_df) , names(classic_major_df))
+    updateSelectInput(session, 'selected_major', choices= convertible_columns)
   })
   
 }

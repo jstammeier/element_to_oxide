@@ -21,25 +21,8 @@ e_t_o_df <- read.table(file = "Element_to_oxide.txt",
 # adds column that calculates oxide to element  
 e_t_o_df$oxide_to_element <- with(e_t_o_df, 1 / element_to_oxide)
 
+get_major_minor_f = function(file_chr) {
 
-convert_f = function(file_chr) {
-
-  cnames = read.table( file = file_chr
-                      ,sep = "\t"
-                      ,header = T
-                      ,nrows = 1
-  )
-
-  cnames <- cnames[-c(1), ]
-  cnames <- as.character(names(cnames)) # deletes first row
-
-  data_df = read.table( file = file_chr
-                       ,sep = "\t"
-                       ,header = F
-                       ,skip = 2
-                       ,col.names = cnames
-  )
- 
   ########### classical approach #############
   #Determine major vs minor elements by concentration level,
   # i.e. %-range = major; ppm-range = minor/trace
@@ -78,6 +61,39 @@ convert_f = function(file_chr) {
   major_chr <- major_chr %in% all_existing_elements_chr
   major_df <- as.data.frame(major_df[, major_chr])
 
+  ret = list(major_df, minor_df)
+  return(ret)
+}
+
+# filter_major_minor_f = function(varlist, major_df, minor_df) {
+#   new_major = 
+#   new_minor =
+#   dt[ ,colnames(dt) %in% list, with=FALSE]
+# }
+
+convert_f = function(file_chr, major_df, minor_df) {
+
+  cnames = read.table( file = file_chr
+                      ,sep = "\t"
+                      ,header = T
+                      ,nrows = 1
+  )
+
+  cnames <- cnames[-c(1), ]
+  cnames <- as.character(names(cnames)) # deletes first row
+
+  data_df = read.table( file = file_chr
+                       ,sep = "\t"
+                       ,header = F
+                       ,skip = 2
+                       ,col.names = cnames
+  )
+ 
+  ## loeschen
+#   tmp = get_major_minor_f(file_chr)
+#   major_df = tmp[[1]]
+#   minor_df = tmp[[2]]
+
   ## Create data frame that only contains important columns, metadata and elemental data
   # rename important non-elemental (metadata) columns
   names(data_df)[1] <- "name"
@@ -91,7 +107,8 @@ convert_f = function(file_chr) {
   )
 
   # can be renamed to Results_df = data_df later
-  Results_df <- data_df[, names(data_df) %in% selected_columns]
+  tmp_df <- data_df[, selected_columns]
+  Results_df <- data_df[, c('name', 'LOI')]
 
   ## Calculate all concentrations of minor elements that are reported as oxides to
   # elemental concentration
@@ -100,7 +117,7 @@ convert_f = function(file_chr) {
   for (i in colnames(minor_df)) {
     print(i)
     if (grepl("O", i, fixed = TRUE)) {
-      print("its a match")
+      print("its a minor match")
       rownames(e_t_o_df) <- e_t_o_df$oxide
       fac <- e_t_o_df[i, "oxide_to_element"]
       pprint(i,
@@ -111,10 +128,11 @@ convert_f = function(file_chr) {
       f <- function(x) {
         x * fac
       }
-      Results_df[, i] <- f(Results_df[,i])
-      #
-      colnames(Results_df)[colnames(Results_df) == i] <- e_t_o_df[i, "element"]
-      names(minor_df)[names(minor_df) == i] <- e_t_o_df[i, "element"]
+
+      Results_df[, e_t_o_df[i, "element"]] <- f(tmp_df[,i])
+    }
+    else {
+      Results_df[, i] <- tmp_df[,i]
     }
   }
 
@@ -124,7 +142,7 @@ convert_f = function(file_chr) {
   for (i in colnames(major_df)) {
     print(i)
     if (!grepl("O", i, fixed = TRUE)) {
-      print("its a match")
+      print("its a major match")
       rownames(e_t_o_df) <- e_t_o_df$element
       fac <- e_t_o_df[i, "element_to_oxide"]
       pprint(i,
@@ -135,10 +153,10 @@ convert_f = function(file_chr) {
       f <- function(x) {
         x * fac
       }
-      Results_df[, i] <- f(Results_df[, i])
-      #
-      names(Results_df)[names(Results_df) == i] <- e_t_o_df[i, "oxide"]
-      names(major_df)[names(major_df) == i] <- e_t_o_df[i, "oxide"]
+      Results_df[, e_t_o_df[i, "oxide"]] <- f(tmp_df[, i])
+    }
+    else {
+      Results_df[, i] <- tmp_df[,i]
     }
   }
 
