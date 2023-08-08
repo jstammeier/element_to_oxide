@@ -1,72 +1,74 @@
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # rstudio only
+# setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # rstudio only
 
 pprint <- function(...) print(paste(...)) #'credit to Jthräno'
 
 #######   Import data             #######
 
-file_chr = file.choose()
+terminal_version_f = function() {
+  file_chr = file.choose()
+  convert_f(file_chr)
+  View(Results_df)
+}
 
-cnames = read.table(file = file_chr,
-  sep = "\t",
-  header = T
-  ,nrows = 1
-  )
-
-cnames <- cnames[-c(1), ]
-cnames <- as.character(names(cnames)) # deletes first row
-
-data_df = read.table(#file.choose(),
-  file = file_chr,
-                     sep = "\t",
-                     header = F
-                     , skip = 2
-                     , col.names = cnames
-                     )
 
 ### Determine which element is trace and which is major
-  # import table with oxide to and from element factors
-  # including list of all elements and respective oxides
+# import table with oxide to and from element factors
+# including list of all elements and respective oxides
 e_t_o_df <- read.table(file = "Element_to_oxide.txt",
-                         sep = "\t",
-                         header =
-                           T)
- 
+                        sep = "\t",
+                        header = T)
+
 # adds column that calculates oxide to element  
 e_t_o_df$oxide_to_element <- with(e_t_o_df, 1 / element_to_oxide)
 
-########### classical approach #############
-#Determine major vs minor elements by concentration level,
-# i.e. %-range = major; ppm-range = minor/trace
 
-major_minor_df <- read.table(
-  "24_2022_example-data_raw.txt"
-  ,
-  sep = "\t"
-  ,
-  header = T
-  ,
-  nrows = 1 
+convert_f = function(file_chr) {
+
+  cnames = read.table( file = file_chr
+                      ,sep = "\t"
+                      ,header = T
+                      ,nrows = 1
   )
 
-## determines rows that are major (=%) and minor (=ppm) elements
-# first renders logical vector with major/minor true
-major_bol <- grepl("%", major_minor_df[1, ], fixed = T) #
-minor_bol <- grepl("ppm", major_minor_df[1, ], fixed = T)
+  cnames <- cnames[-c(1), ]
+  cnames <- as.character(names(cnames)) # deletes first row
 
-# secondly uses above vector to store respective elements/oxides in dataframe
-major_df <- as.data.frame(major_minor_df[, major_bol])
-minor_df <- as.data.frame(major_minor_df[, minor_bol])
+  data_df = read.table( file = file_chr
+                       ,sep = "\t"
+                       ,header = F
+                       ,skip = 2
+                       ,col.names = cnames
+  )
+ 
+  ########### classical approach #############
+  #Determine major vs minor elements by concentration level,
+  # i.e. %-range = major; ppm-range = minor/trace
 
-## the following eliminates the columns that are not elemental data, 
-# by comparing them to the complete list of elements as included in e_t_o_df
-#|| This is frequently the case with % e.g. LOI, Sum, Total etc. 
+  major_minor_df <- read.table( file = file_chr
+                               ,sep = "\t"
+                               ,header = T
+                               ,nrows = 1 
+  )
 
-# first converts the major elements to character vector
-major_chr <- as.character(colnames(major_df))
+  ## determines rows that are major (=%) and minor (=ppm) elements
+  # first renders logical vector with major/minor true
+  major_bol <- grepl("%", major_minor_df[1, ], fixed = T) #
+  minor_bol <- grepl("ppm", major_minor_df[1, ], fixed = T)
 
-# second combines all elements and oxides in character vector
-all_existing_elements_chr <- as.character(e_t_o_df$oxide)
-all_existing_elements_chr <- append(all_existing_elements_chr,
+  # secondly uses above vector to store respective elements/oxides in dataframe
+  major_df <- as.data.frame(major_minor_df[, major_bol])
+  minor_df <- as.data.frame(major_minor_df[, minor_bol])
+
+  ## the following eliminates the columns that are not elemental data, 
+  # by comparing them to the complete list of elements as included in e_t_o_df
+  #|| This is frequently the case with % e.g. LOI, Sum, Total etc. 
+
+  # first converts the major elements to character vector
+  major_chr <- as.character(colnames(major_df))
+
+  # second combines all elements and oxides in character vector
+  all_existing_elements_chr <- as.character(e_t_o_df$oxide)
+  all_existing_elements_chr <- append(all_existing_elements_chr,
                                       as.character(e_t_o_df$element))
 
 
@@ -76,29 +78,26 @@ all_existing_elements_chr <- append(all_existing_elements_chr,
   major_chr <- major_chr %in% all_existing_elements_chr
   major_df <- as.data.frame(major_df[, major_chr])
 
+  ## Create data frame that only contains important columns, metadata and elemental data
+  # rename important non-elemental (metadata) columns
+  names(data_df)[1] <- "name"
 
-## Create data frame that only contains important columns, metadata and elemental data
-# rename important non-elemental (metadata) columns
-names(data_df)[1] <- "name"
-
-
-# select columns to extract from RFA data frame
+  # select columns to extract from RFA data frame
   selected_columns <- c(
-    "name",
-    "LOI", #potentially needs to go, not always included, how to fix? #FUCK
-    colnames(major_df),
-    colnames(minor_df)
-)
+                        "name",
+                        "LOI", #potentially needs to go, not always included, how to fix? #FUCK
+                        colnames(major_df),
+                        colnames(minor_df)
+  )
 
+  # can be renamed to Results_df = data_df later
+  Results_df <- data_df[, names(data_df) %in% selected_columns]
 
-# can be renamed to Results_df = data_df later
-Results_df <- data_df[, names(data_df) %in% selected_columns]
+  ## Calculate all concentrations of minor elements that are reported as oxides to
+  # elemental concentration
+  # loop over all minor elements as defined in minor_df (i.e. ppm range)
 
-## Calculate all concentrations of minor elements that are reported as oxides to
-# elemental concentration
-# loop over all minor elements as defined in minor_df (i.e. ppm range)
-
-for (i in colnames(minor_df)) {
+  for (i in colnames(minor_df)) {
     print(i)
     if (grepl("O", i, fixed = TRUE)) {
       print("its a match")
@@ -119,10 +118,9 @@ for (i in colnames(minor_df)) {
     }
   }
 
-## Calculate all concentrations of major elements that are reported as elements to
-# oxide concentration
-# loop over all major elements as defined in major_df (i.e. % range)
-
+  ## Calculate all concentrations of major elements that are reported as elements to
+  # oxide concentration
+  # loop over all major elements as defined in major_df (i.e. % range)
   for (i in colnames(major_df)) {
     print(i)
     if (!grepl("O", i, fixed = TRUE)) {
@@ -144,5 +142,6 @@ for (i in colnames(minor_df)) {
     }
   }
 
-View(Results_df)
+  return(Results_df)
+}
 
