@@ -4,20 +4,23 @@ library(shiny)
 source("Element_to_oxide_Äpp.R")
 
 ui <- fluidPage(
-  titlePanel("Element to Oxide"),
+  titlePanel("Element to Oxide Conversion"),
   
   sidebarLayout(
     sidebarPanel(
       fileInput("upload", h4("File input")),
-#       helpText("Select the file that you would like to convert"),
+      helpText("Select a tab-separated .txt file that you would like to convert"),
       
-#       selectInput("var", 
-#                   label = "Choose how to convert",
-#                   choices = c("classic", "manual"),
-#                   selected = "classic"
-#       ),
-
-      selectInput("selected_minor", 
+      selectInput("conversion_type",
+                  label = "Choose how to convert",
+                  choices = c("classic", "manual"),
+                  selected = "classic"
+      ),
+      
+      helpText("classic converts percent range to oxides and ppm range to elements"),
+      
+      
+      selectInput("selected_minor",
                   label = "as element",
                   choices = c(),
                   multiple = T
