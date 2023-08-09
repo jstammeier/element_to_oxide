@@ -13,3 +13,5 @@ Test with:
 
 Requires: 
 Element_to_oxide_Äpp.R
+
+runGitHub( "element_to_oxide", "jstammeier")
