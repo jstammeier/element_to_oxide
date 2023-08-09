@@ -66,7 +66,7 @@ server <- function(input, output, session) {
 #     selected_major = major_df[ names(major_df) %in% input$var]
 #     selected_minor = minor_df[ names(minor_df) %in% input$var]
 
-    tbl = read.table(file = input$upload$name,
+    tbl = read.table(file = input$upload$name
                                 ,sep = "\t"
                                 ,header = T
                                 ,nrows = 1 
