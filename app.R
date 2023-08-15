@@ -8,16 +8,19 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      fileInput("upload", h4("File input")),
+      fileInput("upload", h4("File input")
+                , accept = ".txt"),
       helpText("Select a tab-separated .txt file that you would like to convert"),
       
       selectInput("conversion_type",
-                  label = "Choose how to convert",
+                  label = "Choose your fighter",
                   choices = c("classic", "manual"),
                   selected = "classic"
       ),
       
-      helpText("classic converts percent range to oxides and ppm range to elements"),
+      helpText("classic: converts percent range to oxides and ppm range to elements"),
+               
+      helpText("manual: choose elements individually"),
       
       
       selectInput("selected_minor",
@@ -45,12 +48,17 @@ ui <- fluidPage(
 
 #       conditionalPanel(condition = "input.var != null && input.var == 'manual'",
 #       conditionalPanel(condition = "input.upload != null && input.upload.name != null",
-                       downloadButton("download"),
+                       
 #       ),
-
+        h4(helpText("Uploaded table")),
       tableOutput("original"),
-      tableOutput("converted")
-
+      
+        h4(helpText("Converted table")),
+      tableOutput("converted"),
+      
+      downloadButton("download"),
+      
+      textOutput("testing")
     )  
   ),
 )
@@ -58,7 +66,7 @@ ui <- fluidPage(
 # Define server logic ----
 server <- function(input, output, session) {
 
-  generate_output = reactive({
+    generate_output = reactive({
     req(input$upload)
 #     req(input$selected_minor)
 
@@ -115,8 +123,15 @@ server <- function(input, output, session) {
 
   output$converted <- renderTable({
     head(generate_output(), 5)
+    # generate_output()
   })
 
+
+  output$testing <- renderText({"Patzhalter"})
+  
+  
+  
+  
   observe({
     req(input$upload)
     tmp = get_major_minor_f(input$upload$datapath)
